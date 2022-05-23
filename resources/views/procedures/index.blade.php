@@ -42,7 +42,7 @@
                                 @endforelse
                             </div>
                         </td>
-                        <td class="p-2 text-center">{{ $procedure->status }}</td>
+                        <td class="p-2 text-center">{{ $procedure->status?->toString() }}</td>
                         <td class="p-2 text-center">{{ $procedure->created_at }}</td>
                         <td class="p-2 text-right">
                             @can('view', $procedure)

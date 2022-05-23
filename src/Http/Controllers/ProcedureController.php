@@ -2,14 +2,15 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Carbon\Carbon;
+use Hito\Admin\Enums\Status;
 use Hito\Platform\Models\Procedure;
 use Hito\Platform\Services\ProcedureService;
-use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProcedureController extends Controller
@@ -54,10 +55,15 @@ class ProcedureController extends Controller
     public function store(Request $request)
     {
         $data = $this->getValidatedData($request);
-        $data['locations'] = array_filter($data['locations'], fn($location) => !is_null($location));
 
-        $procedure = $this->procedureService->create($data['name'], $data['description'], $data['content'], $data['status'],
-            $data['published_at'] ?? null, $data['locations'] ?? null, auth()->id());
+        $procedure = $this->procedureService->create(
+            $data['name'],
+            $data['description'],
+            $data['content'],
+            $data['status'],
+            $data['published_at'] ?? null,
+            $data['locations'] ?? null
+        );
 
         return redirect()->route('admin.procedures.edit', $procedure->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Procedure']));
@@ -93,10 +99,8 @@ class ProcedureController extends Controller
     public function update(Request $request, Procedure $procedure)
     {
         $data = $this->getValidatedData($request);
-        $locations = array_filter($data['locations'], fn($location) => !is_null($location));
-        unset($data['locations']);
 
-        $this->procedureService->update($procedure->id, $data, $locations);
+        $this->procedureService->update($procedure->id, $data);
 
         return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Procedure']));
     }
@@ -110,7 +114,7 @@ class ProcedureController extends Controller
     {
         $this->authorize('delete', $procedure);
 
-        return view('shared.delete-entity', [
+        return view('hito::_shared.delete-entity', [
             'action' => route('admin.procedures.destroy', $procedure->id),
             'noAction' => route('admin.procedures.show', $procedure->id),
             'entity' => 'procedure'
@@ -138,7 +142,10 @@ class ProcedureController extends Controller
             'description' => 'required|max:255',
             'content' => 'required',
             'published_at' => 'nullable|date_format:Y-m-d H:i',
-            'status' => 'required',
+            'status' => [
+                'required',
+                Rule::in(array_map(fn($status) => $status->value, Status::cases()))
+            ],
             'locations' => 'nullable|array',
             'location.*' => 'uuid'
         ]);
@@ -146,6 +153,8 @@ class ProcedureController extends Controller
         if (!empty($data['published_at'])) {
             $data['published_at'] = Carbon::parse($data['published_at']);
         }
+
+        $data['locations'] = array_filter(request('locations', []), fn($location) => !is_null($location));
 
         return $data;
     }
