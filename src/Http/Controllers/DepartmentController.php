@@ -63,12 +63,14 @@ class DepartmentController extends Controller
             ],
             'description' => 'required|max:255',
             'members' => 'nullable|array',
-            'member.*' => 'uuid'
+            'members.*' => 'uuid'
         ]);
 
-        $department = $this->departmentService->create(request('name'), request('description'),  request('member'), auth()->id());
-
-        $this->departmentService->syncUsers($department->id, request('members', []));
+        $department = $this->departmentService->create(
+            request('name'),
+            request('description'),
+            request('members', [])
+        );
 
         return redirect()->route('admin.departments.edit', $department->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Department']));
