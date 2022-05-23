@@ -6,8 +6,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "hito-software/core": "dev-master",
-        "hito-software/module": "dev-master",
+        "hito-software/core": "*",
+        "hito-software/module": "*",
         "spatie/laravel-package-tools": "^1.9.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^9.11",
