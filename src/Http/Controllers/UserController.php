@@ -40,9 +40,8 @@ class UserController extends Controller
     /**
      * @return View
      */
-    public function create(): View
+    public function create(User $user): View
     {
-        $user = new Group();
         return view('hito-admin::users.create', compact('user'));
     }
 
@@ -100,12 +99,12 @@ class UserController extends Controller
     public function edit(User $user): View
     {
         $groups = $this->groupService->getAll()->map(fn($group) => [
-            'value' => $group->name,
+            'value' => $group->id,
             'label' => $group->name
         ])->toArray();
 
         $permissions = $this->permissionService->getAll()->map(fn($permission) => [
-            'value' => $permission->name,
+            'value' => $permission->id,
             'label' => $permission->name
         ])->toArray();
 
@@ -135,19 +134,16 @@ class UserController extends Controller
             'timezone' => 'required|uuid',
             'phone' => 'nullable|numeric|regex:/^[\+]?[0-9]{4,20}$/',
             'groups' => 'nullable|array',
-            'groups.*' => 'int',
+            'groups.*' => 'uuid',
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string'
+            'permissions.*' => 'uuid'
         ]);
 
-
         $data = request()->only(['name', 'surname', 'email', 'phone', 'skype', 'whatsapp', 'telegram']);
+        $data['groups'] = request('groups', []);
+        $data['permissions'] = request('permissions', []);
         $data['location_id'] = request('location');
         $data['timezone_id'] = request('timezone');
-
-        $groups = $this->groupService->getByIds(request('groups', []))->pluck('id');
-        $this->userService->syncGroups($user->id, $groups->toArray());
-        $this->userService->syncPermissions($user->id, request('permissions', []));
 
         $this->userService->update($user->id, $data);
         return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'User']));

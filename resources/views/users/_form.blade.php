@@ -10,15 +10,15 @@
 
 @can('manage-groups', \App\Models\User::class)
     @if(!empty($groups))
-        <x-hito::Form.Select title="Groups" name="groups[]" multiple
-                       :value="$user->groups?->pluck('name')->toArray()" :items="$groups" />
+        <x-hito::Form.Select title="Groups" name="groups" multiple
+                       :value="$user->groups?->pluck('id')->toArray()" :items="$groups" />
     @endif
 @endcan
 
 @can('manage-permissions', \App\Models\User::class)
     @if(!empty($permissions))
-        <x-hito::Form.Select title="Permissions" name="permissions[]" multiple
-                       :value="$user->permissions?->pluck('name')->toArray()" :items="$permissions" />
+        <x-hito::Form.Select title="Permissions" name="permissions" multiple
+                       :value="$user->permissions?->pluck('id')->toArray()" :items="$permissions" />
     @endif
 @endcan
 
