@@ -32,9 +32,11 @@ class AnnouncementController extends Controller
     /**
      * @return View
      */
-    public function create()
+    public function create(Announcement $announcement)
     {
-        return view('hito-admin::announcements.create', ['announcement' => new Announcement()]);
+        $announcement->fill(['published_at' => Carbon::now()]);
+
+        return view('hito-admin::announcements.create', compact('announcement'));
     }
 
     /**
@@ -44,12 +46,18 @@ class AnnouncementController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $this->getValidatedData($request);
-        $data['locations'] = array_filter($data['locations'], fn($location) => !is_null($location));
+        $data = $this->getValidatedData(request());
 
-        $announcement = $this->announcementService->create($data['name'], $data['description'], $data['content'],
-            $data['published_at'] ?? null, $data['pin_start_at'] ?? null,
-            $data['pin_end_at'] ?? null, $data['locations'] ?? null, auth()->id());
+        $announcement = $this->announcementService->create(
+            $data['name'],
+            $data['description'],
+            $data['content'],
+            $data['published_at'],
+            $data['pin_start_at'],
+            $data['pin_end_at'],
+            $data['locations'],
+            auth()->id()
+        );
 
         return redirect()->route('admin.announcements.edit', $announcement->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Announcement']));
@@ -85,10 +93,8 @@ class AnnouncementController extends Controller
     public function update(Request $request, Announcement $announcement)
     {
         $data = $this->getValidatedData($request);
-        $locations = array_filter($data['locations'], fn($location) => !is_null($location));
-        unset($data['locations']);
 
-        $this->announcementService->update($announcement->id, $data, $locations);
+        $this->announcementService->update($announcement->id, $data);
 
         return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Announcement']));
     }
@@ -137,16 +143,18 @@ class AnnouncementController extends Controller
         ]);
 
         if (!empty($data['published_at'])) {
-            $data['published_at'] = Carbon::parse($data['published_at']);
+            $data['published_at'] = Carbon::parse(request('published_at'));
         }
 
         if (!empty($data['pin_start_at'])) {
-            $data['pin_start_at'] = Carbon::parse($data['pin_start_at']);
+            $data['pin_start_at'] = Carbon::parse(request('pin_start_at'));
         }
 
         if (!empty($data['pin_end_at'])) {
-            $data['pin_end_at'] = Carbon::parse($data['pin_end_at']);
+            $data['pin_end_at'] = Carbon::parse(request('pin_end_at'));
         }
+
+        $data['locations'] = array_filter(request('locations', []), fn($location) => !is_null($location));
 
         return $data;
     }
