@@ -68,16 +68,18 @@ class GroupController extends Controller
             'description' => [
                 'required',
             ],
-            'members' => 'nullable|array',
-            'member.*' => 'uuid',
+            'users' => 'nullable|array',
+            'users.*' => 'uuid',
             'permissions' => 'nullable|array',
-            'permission.*' => 'uuid'
+            'permissions.*' => 'uuid'
         ]);
 
-        $group = $this->groupService->create(request('name'), request('description'),  request('member'), request('permission'), auth()->id());
-
-        $this->groupService->syncUsers($group->id, request('members', []));
-        $this->groupService->syncPermissions($group->id, request('permissions', []));
+        $group = $this->groupService->create(
+            request('name'),
+            request('description'),
+            request('users', []),
+            request('permission', [])
+        );
 
         return redirect()->route('admin.groups.edit', $group->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Group']));
@@ -128,13 +130,13 @@ class GroupController extends Controller
                 Rule::unique('groups')->ignoreModel($group)
             ],
             'description' => 'required|max:255',
-            'members' => 'nullable|array',
-            'member.*' => 'uuid',
+            'users' => 'nullable|array',
+            'users.*' => 'uuid',
             'permissions' => 'nullable|array',
             'permission.*' => 'uuid'
         ]);
 
-        $this->groupService->update($group->id, request(['name', 'description', 'members', 'permissions']));
+        $this->groupService->update($group->id, request(['name', 'description', 'users', 'permissions']));
         return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Group']));
     }
 
