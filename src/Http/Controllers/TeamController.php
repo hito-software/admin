@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreTeamRequest;
+use Hito\Admin\Http\Requests\UpdateTeamRequest;
 use Hito\Platform\Models\Team;
 use Hito\Platform\Services\ProjectService;
 use Hito\Platform\Services\RoleService;
@@ -19,10 +21,10 @@ use Illuminate\Validation\ValidationException;
 class TeamController extends Controller
 {
     public function __construct(
-        private TeamService    $teamService,
-        private UserService    $userService,
-        private RoleService    $roleService,
-        private ProjectService $projectService
+        private readonly TeamService $teamService,
+        private readonly UserService $userService,
+        private readonly RoleService $roleService,
+        private readonly ProjectService $projectService
     ) {
         $this->authorizeResource(Team::class);
     }
@@ -57,23 +59,16 @@ class TeamController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreTeamRequest $request
      * @return RedirectResponse
      * @throws ValidationException
      */
-    public function store(Request $request, Team $team): RedirectResponse
+    public function store(StoreTeamRequest $request): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('teams')->ignoreModel($team)->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'projects' => 'nullable|array',
-            'projects.*' => 'uuid'
-        ]);
-
-        $team = $this->teamService->create(request('name'), request('description'), auth()->id());
+        $team = $this->teamService->create(
+            request('name'),
+            request('description')
+        );
 
         $this->validateRoles($request);
 
@@ -123,23 +118,13 @@ class TeamController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateTeamRequest $request
      * @param Team $team
      * @return RedirectResponse
      * @throws ValidationException
      */
-    public function update(Request $request, Team $team): RedirectResponse
+    public function update(UpdateTeamRequest $request, Team $team): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('teams')->ignoreModel($team, 'name')->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'projects' => 'nullable|array',
-            'projects.*' => 'uuid'
-        ]);
-
         $this->validateRoles($request);
 
         $data = request()->only(['name', 'description']);

@@ -9,7 +9,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Nwidart\Modules\Facades\Module;
 use function back;
 use function config;
 use function redirect;
@@ -18,8 +17,9 @@ use function view;
 
 class ModuleController extends Controller
 {
-    public function __construct(private ComposerService $composerService,
-    private ModuleService $moduleService)
+    public function __construct(
+        private readonly ComposerService $composerService,
+        private readonly ModuleService   $moduleService)
     {
     }
 
@@ -29,7 +29,7 @@ class ModuleController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', \Nwidart\Modules\Module::class);
+        $this->authorize('viewAny', 'module');
 
         $modules = $this->moduleService->getAllInstances();
 

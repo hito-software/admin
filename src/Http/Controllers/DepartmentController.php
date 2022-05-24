@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreDepartmentRequest;
+use Hito\Admin\Http\Requests\UpdateDepartmentRequest;
 use Hito\Platform\Models\Department;
 use Hito\Platform\Services\DepartmentService;
 use Hito\Platform\Services\UserService;
@@ -16,8 +18,9 @@ use Illuminate\Validation\ValidationException;
 
 class DepartmentController extends Controller
 {
-    public function __construct(private DepartmentService $departmentService,
-                                private UserService       $userService)
+    public function __construct(
+        private readonly DepartmentService $departmentService,
+        private readonly UserService       $userService)
     {
         $this->authorizeResource(Department::class);
     }
@@ -49,23 +52,12 @@ class DepartmentController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreDepartmentRequest $request
+     * @param Department $department
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request, Department $department): RedirectResponse
+    public function store(StoreDepartmentRequest $request, Department $department): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                'max:255',
-                Rule::unique('departments')->ignoreModel($department)->withoutTrashed()
-            ],
-            'description' => 'required|max:255',
-            'members' => 'nullable|array',
-            'members.*' => 'uuid'
-        ]);
-
         $department = $this->departmentService->create(
             request('name'),
             request('description'),
@@ -106,24 +98,12 @@ class DepartmentController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateDepartmentRequest $request
      * @param Department $department
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function update(Request $request, Department $department): RedirectResponse
+    public function update(UpdateDepartmentRequest $request, Department $department): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                'max:255',
-                Rule::unique('departments')->ignoreModel($department)->withoutTrashed()
-            ],
-            'description' => 'required|max:255',
-            'members' => 'nullable|array',
-            'member.*' => 'uuid'
-        ]);
-
         $data = request(['name', 'description', 'members']);
 
         $this->departmentService->update($department->id, $data);

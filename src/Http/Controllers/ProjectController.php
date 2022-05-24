@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreProjectRequest;
+use Hito\Admin\Http\Requests\UpdateProjectRequest;
 use Hito\Platform\Models\Project;
 use Hito\Platform\Services\ClientService;
 use Hito\Platform\Services\CountryService;
@@ -20,12 +22,13 @@ use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
-    public function __construct(private ProjectService $projectService,
-                                private ClientService  $clientService,
-                                private CountryService $countryService,
-                                private RoleService    $roleService,
-                                private UserService    $userService,
-                                private TeamService    $teamService)
+    public function __construct(
+        private readonly ProjectService $projectService,
+        private readonly ClientService  $clientService,
+        private readonly CountryService $countryService,
+        private readonly RoleService    $roleService,
+        private readonly UserService    $userService,
+        private readonly TeamService    $teamService)
     {
         $this->authorizeResource(Project::class);
     }
@@ -71,26 +74,21 @@ class ProjectController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreProjectRequest $request
      * @return RedirectResponse
      * @throws ValidationException
      */
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(StoreProjectRequest $request): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('projects')->ignoreModel($project)->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'country' => 'nullable',
-            'address' => 'nullable',
-            'client' => 'required',
-            'teams' => 'nullable|array',
-            'team.*' => 'uuid'
-        ]);
-
-        $project = $this->projectService->create(request('name'), request('client'), request('country'), request('address'), request('team'), request('description'), auth()->id());
+        $project = $this->projectService->create(
+            request('name'),
+            request('client'),
+            request('country'),
+            request('address'),
+            request('team'),
+            request('description'),
+            auth()->id()
+        );
 
         $this->validateRoles($request);
 
@@ -155,26 +153,13 @@ class ProjectController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateProjectRequest $request
      * @param Project $project
      * @return RedirectResponse
      * @throws ValidationException
      */
-    public function update(Request $request, Project $project): RedirectResponse
+    public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('projects')->ignoreModel($project)->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'country' => 'nullable',
-            'address' => 'nullable',
-            'client' => 'required',
-            'teams' => 'nullable|array',
-            'team.*' => 'uuid'
-        ]);
-
         $this->validateRoles($request);
 
         $data = request()->only(['name', 'description', 'address']);

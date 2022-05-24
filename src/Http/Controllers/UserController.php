@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreUserRequest;
+use Hito\Admin\Http\Requests\UpdateUserRequest;
 use Hito\Platform\Models\Group;
 use Hito\Platform\Models\User;
 use Hito\Platform\Services\GroupService;
@@ -20,9 +22,10 @@ use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
-    public function __construct(private UserService       $userService,
-                                private GroupService      $groupService,
-                                private PermissionService $permissionService)
+    public function __construct(
+        private UserService       $userService,
+        private GroupService      $groupService,
+        private PermissionService $permissionService)
     {
         $this->authorizeResource(User::class);
     }
@@ -46,13 +49,12 @@ class UserController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreUserRequest $request
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $data = $this->validate($request, [
+        $data = $request->only([
             'name' => 'required',
             'surname' => 'required',
             'email' => 'required|email|unique:users',
@@ -112,33 +114,12 @@ class UserController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateUserRequest $request
      * @param User $user
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'surname' => 'required',
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('users')->ignoreModel($user, 'email')
-            ],
-            'skype' => 'nullable',
-            'whatsapp' => 'nullable',
-            'telegram' => 'nullable',
-            'location' => 'required|uuid',
-            'timezone' => 'required|uuid',
-            'phone' => 'nullable|numeric|regex:/^[\+]?[0-9]{4,20}$/',
-            'groups' => 'nullable|array',
-            'groups.*' => 'uuid',
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'uuid'
-        ]);
-
         $data = request()->only(['name', 'surname', 'email', 'phone', 'skype', 'whatsapp', 'telegram']);
         $data['groups'] = request('groups', []);
         $data['permissions'] = request('permissions', []);

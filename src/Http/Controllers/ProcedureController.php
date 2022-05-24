@@ -4,6 +4,8 @@ namespace Hito\Admin\Http\Controllers;
 
 use Carbon\Carbon;
 use Hito\Admin\Enums\Status;
+use Hito\Admin\Http\Requests\StoreProcedureRequest;
+use Hito\Admin\Http\Requests\UpdateProcedureRequest;
 use Hito\Platform\Models\Procedure;
 use Hito\Platform\Services\ProcedureService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -48,13 +50,12 @@ class ProcedureController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreProcedureRequest $request
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request)
+    public function store(StoreProcedureRequest $request)
     {
-        $data = $this->getValidatedData($request);
+        $data = $this->getDataFromRequest($request);
 
         $procedure = $this->procedureService->create(
             $data['name'],
@@ -92,13 +93,13 @@ class ProcedureController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param Request $request
+     * @param UpdateProcedureRequest $request
      * @param Procedure $procedure
      * @return RedirectResponse
      */
-    public function update(Request $request, Procedure $procedure)
+    public function update(UpdateProcedureRequest $request, Procedure $procedure)
     {
-        $data = $this->getValidatedData($request);
+        $data = $this->getDataFromRequest($request);
 
         $this->procedureService->update($procedure->id, $data);
 
@@ -135,19 +136,15 @@ class ProcedureController extends Controller
             ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Procedure']));
     }
 
-    private function getValidatedData(Request $request): array
+    private function getDataFromRequest(Request $request): array
     {
-        $data = $this->validate($request, [
-            'name' => 'required',
-            'description' => 'required|max:255',
-            'content' => 'required',
-            'published_at' => 'nullable|date_format:Y-m-d H:i',
-            'status' => [
-                'required',
-                Rule::in(array_map(fn($status) => $status->value, Status::cases()))
-            ],
-            'locations' => 'nullable|array',
-            'location.*' => 'uuid'
+        $data = $request->only([
+            'name',
+            'description',
+            'content',
+            'published_at',
+            'status',
+            'locations'
         ]);
 
         if (!empty($data['published_at'])) {

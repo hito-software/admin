@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreLocationRequest;
+use Hito\Admin\Http\Requests\UpdateLocationRequest;
 use Hito\Platform\Models\Location;
 use Hito\Platform\Services\CountryService;
 use Hito\Platform\Services\LocationService;
@@ -15,8 +17,9 @@ use Illuminate\Validation\ValidationException;
 
 class LocationController extends Controller
 {
-    public function __construct(private LocationService $locationService,
-                                private CountryService  $countryService)
+    public function __construct(
+        private readonly LocationService $locationService,
+        private readonly CountryService  $countryService)
     {
         $this->authorizeResource(Location::class);;
     }
@@ -48,23 +51,12 @@ class LocationController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreLocationRequest $request
+     * @param Location $location
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request, Location $location): RedirectResponse
+    public function store(StoreLocationRequest $request, Location $location): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                'max:100',
-                Rule::unique('locations')->ignoreModel($location)->withoutTrashed()
-            ],
-            'description' => 'nullable|max:255',
-            'country' => 'required|uuid',
-            'address' => 'required|max:150',
-        ]);
-
         $location = $this->locationService->create(request('name'),
             request('country'), request('address'), request('description'), auth()->user()->id);
 
@@ -102,24 +94,12 @@ class LocationController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateLocationRequest $request
      * @param Location $location
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function update(Request $request, Location $location): RedirectResponse
+    public function update(UpdateLocationRequest $request, Location $location): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                'max:100',
-                Rule::unique('locations')->ignoreModel($location)->withoutTrashed()
-            ],
-            'description' => 'nullable|max:255',
-            'country' => 'required|uuid',
-            'address' => 'required|max:150',
-        ]);
-
         $data = request(['name', 'description', 'address']);
         $data['country_id'] = request('country');
 

@@ -14,7 +14,7 @@ use function view;
 
 class ImportController extends Controller
 {
-    public function __construct(private ImportService $importService)
+    public function __construct(private readonly ImportService $importService)
     {
     }
 

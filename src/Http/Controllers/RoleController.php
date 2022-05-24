@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreRoleRequest;
+use Hito\Admin\Http\Requests\UpdateRoleRequest;
 use Hito\Platform\Models\Role;
 use Hito\Platform\Services\RoleService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -14,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
-    public function __construct(private RoleService $roleService)
+    public function __construct(private readonly RoleService $roleService)
     {
         $this->authorizeResource(Role::class);
     }
@@ -51,22 +53,17 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreRoleRequest $request
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreRoleRequest $request): RedirectResponse
     {
-        $this->validate(request(), [
-            'name' => [
-                'required'
-            ],
-            'description' => 'max:255',
-            'type' => 'required',
-            'required' => 'required|boolean',
-        ]);
-
-        $role = $this->roleService->create(request('type'), request('name'), request('description'), request('required'), auth()->id());
+        $role = $this->roleService->create(
+            request('type'),
+            request('name'),
+            request('description'),
+            request('required')
+        );
 
         return redirect()->route('admin.roles.edit', $role->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Project']));
@@ -94,20 +91,16 @@ class RoleController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateRoleRequest $request
      * @param Role $role
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function update(Request $request, Role $role): RedirectResponse
+    public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
-        $data = $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('teams')->ignoreModel($role)
-            ],
-            'description' => 'max:255',
-            'required' => 'required|boolean'
+        $data = $request->only([
+            'name',
+            'description',
+            'required'
         ]);
 
         $this->roleService->update($role->id, $data);

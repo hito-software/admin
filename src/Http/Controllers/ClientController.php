@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreClientRequest;
+use Hito\Admin\Http\Requests\UpdateClientRequest;
 use Hito\Platform\Models\Client;
 use Hito\Platform\Services\ClientService;
 use Hito\Platform\Services\CountryService;
@@ -15,8 +17,9 @@ use Illuminate\Validation\ValidationException;
 
 class ClientController extends Controller
 {
-    public function __construct(private ClientService  $clientService,
-                                private CountryService $countryService)
+    public function __construct(
+        private readonly ClientService  $clientService,
+        private readonly CountryService $countryService)
     {
         $this->authorizeResource(Client::class);
     }
@@ -46,24 +49,18 @@ class ClientController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreClientRequest $request
+     * @param Client $client
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request, Client $client)
+    public function store(StoreClientRequest $request, Client $client)
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('clients')->ignoreModel($client)->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'country' => 'required|uuid',
-            'address' => 'nullable'
-        ]);
-
-        $request = $this->clientService->create(request('name'), request('description'),
-            request('country'), request('address'), auth()->id());
+        $request = $this->clientService->create(
+            request('name'),
+            request('description'),
+            request('country'),
+            request('address')
+        );
 
         return redirect()->route('admin.clients.edit', $request->id)
             ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Client']));
@@ -101,18 +98,8 @@ class ClientController extends Controller
      * @param Client $client
      * @return RedirectResponse
      */
-    public function update(Request $request, Client $client)
+    public function update(UpdateClientRequest $request, Client $client)
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('clients')->ignoreModel($client)->withoutTrashed()
-            ],
-            'description' => 'max:255',
-            'country' => 'required|uuid',
-            'address' => 'nullable'
-        ]);
-
         $data = request(['name', 'description', 'address']);
         $data['country_id'] = request('country');
 

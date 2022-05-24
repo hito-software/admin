@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreAnnouncementRequest;
+use Hito\Admin\Http\Requests\UpdateAnnouncementRequest;
 use Hito\Platform\Models\Announcement;
 use Hito\Platform\Services\AnnouncementService;
 use Carbon\Carbon;
@@ -44,9 +46,9 @@ class AnnouncementController extends Controller
      * @return RedirectResponse
      * @throws ValidationException
      */
-    public function store(Request $request)
+    public function store(StoreAnnouncementRequest $request)
     {
-        $data = $this->getValidatedData(request());
+        $data = $this->getDataFromRequest($request);
 
         $announcement = $this->announcementService->create(
             $data['name'],
@@ -86,13 +88,13 @@ class AnnouncementController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param Request $request
+     * @param UpdateAnnouncementRequest $request
      * @param Announcement $announcement
      * @return RedirectResponse
      */
-    public function update(Request $request, Announcement $announcement)
+    public function update(UpdateAnnouncementRequest $request, Announcement $announcement)
     {
-        $data = $this->getValidatedData($request);
+        $data = $this->getDataFromRequest($request);
 
         $this->announcementService->update($announcement->id, $data);
 
@@ -129,17 +131,16 @@ class AnnouncementController extends Controller
             ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Announcement']));
     }
 
-    private function getValidatedData(Request $request): array
+    private function getDataFromRequest(Request $request): array
     {
-        $data = $this->validate($request, [
-            'name' => 'required',
-            'description' => 'required|max:255',
-            'content' => 'required',
-            'published_at' => 'required|date_format:Y-m-d H:i',
-            'pin_start_at' => 'nullable|date_format:Y-m-d H:i|after_or_equal:published_at|required_unless:pin_end_at,null',
-            'pin_end_at' => 'nullable|date_format:Y-m-d H:i|after:pin_start_at',
-            'locations' => 'nullable|array',
-            'location.*' => 'uuid'
+        $data = $request->only([
+            'name',
+            'description',
+            'content',
+            'published_at',
+            'pin_start_at',
+            'pin_end_at',
+            'locations'
         ]);
 
         if (!empty($data['published_at'])) {

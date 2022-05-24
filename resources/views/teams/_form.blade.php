@@ -1,6 +1,6 @@
 <x-hito::Form.Input title="Name" name="name" :required="true" value="{{ $team->name }}" />
 <x-hito::Form.Input title="Description" name="description" type="textarea" value="{{ $team->description }}" />
-<x-hito::Form.Select title="Projects" name="projects[]" multiple :value="$team->projects?->pluck('id')->toArray()"
+<x-hito::Form.Select title="Projects" name="projects" multiple :value="$team->projects?->pluck('id')->toArray()"
     :items="$projects" />
 
 @if($roles->count() && !empty($members))

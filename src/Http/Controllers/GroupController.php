@@ -3,6 +3,8 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Http\Requests\StoreGroupRequest;
+use Hito\Admin\Http\Requests\UpdateGroupRequest;
 use Hito\Platform\Models\Group;
 use Hito\Platform\Services\GroupService;
 use Hito\Platform\Services\PermissionService;
@@ -20,9 +22,10 @@ use function view;
 
 class GroupController extends Controller
 {
-    public function __construct(private GroupService      $groupService,
-                                private UserService       $userService,
-                                private PermissionService $permissionService)
+    public function __construct(
+        private readonly GroupService      $groupService,
+        private readonly UserService       $userService,
+        private readonly PermissionService $permissionService)
     {
         $this->authorizeResource(Group::class);
     }
@@ -57,21 +60,11 @@ class GroupController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param StoreGroupRequest $request
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreGroupRequest $request): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => 'required|unique:groups',
-            'description' => 'max:255',
-            'users' => 'nullable|array',
-            'users.*' => 'uuid',
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'uuid'
-        ]);
-
         $group = $this->groupService->create(
             request('name'),
             request('description'),
@@ -115,25 +108,12 @@ class GroupController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param UpdateGroupRequest $request
      * @param Group $group
      * @return RedirectResponse
-     * @throws ValidationException
      */
-    public function update(Request $request, Group $group): RedirectResponse
+    public function update(UpdateGroupRequest $request, Group $group): RedirectResponse
     {
-        $this->validate($request, [
-            'name' => [
-                'required',
-                Rule::unique('groups')->ignoreModel($group)
-            ],
-            'description' => 'max:255',
-            'users' => 'nullable|array',
-            'users.*' => 'uuid',
-            'permissions' => 'nullable|array',
-            'permission.*' => 'uuid'
-        ]);
-
         $this->groupService->update($group->id, request(['name', 'description', 'users', 'permissions']));
         return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Group']));
     }
