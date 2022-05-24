@@ -65,9 +65,7 @@ class GroupController extends Controller
     {
         $this->validate($request, [
             'name' => 'required|unique:groups',
-            'description' => [
-                'required',
-            ],
+            'description' => 'max:255',
             'users' => 'nullable|array',
             'users.*' => 'uuid',
             'permissions' => 'nullable|array',
@@ -129,7 +127,7 @@ class GroupController extends Controller
                 'required',
                 Rule::unique('groups')->ignoreModel($group)
             ],
-            'description' => 'required|max:255',
+            'description' => 'max:255',
             'users' => 'nullable|array',
             'users.*' => 'uuid',
             'permissions' => 'nullable|array',
