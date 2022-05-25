@@ -2,6 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
+use Carbon\Carbon;
 use Hito\Admin\Http\Controllers\Controller;
 use Hito\Admin\Http\Requests\StoreUserRequest;
 use Hito\Admin\Http\Requests\UpdateUserRequest;
@@ -23,9 +24,9 @@ use Illuminate\Validation\ValidationException;
 class UserController extends Controller
 {
     public function __construct(
-        private UserService       $userService,
-        private GroupService      $groupService,
-        private PermissionService $permissionService)
+        private readonly UserService       $userService,
+        private readonly GroupService      $groupService,
+        private readonly PermissionService $permissionService)
     {
         $this->authorizeResource(User::class);
     }
@@ -55,16 +56,21 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): RedirectResponse
     {
         $data = $request->only([
-            'name' => 'required',
-            'surname' => 'required',
-            'email' => 'required|email|unique:users',
-            'location' => 'required|uuid',
-            'timezone' => 'required|uuid',
-            'skype' => 'nullable',
-            'whatsapp' => 'nullable',
-            'telegram' => 'nullable',
-            'phone' => 'nullable|numeric|regex:/^[\+]?[0-9]{4,20}/',
+            'name',
+            'surname',
+            'email',
+            'birthdate',
+            'location',
+            'timezone',
+            'skype',
+            'whatsapp',
+            'telegram',
+            'phone',
         ]);
+
+        if ($birthdate = \Arr::get($data, $data['birthdate'])) {
+            $birthdate = Carbon::parse($birthdate);
+        }
 
         $user = $this->userService->create(
             $data['name'],
@@ -72,10 +78,11 @@ class UserController extends Controller
             $data['email'],
             $data['location'],
             $data['timezone'],
+            $birthdate,
+            $data['phone'],
             $data['skype'],
             $data['whatsapp'],
             $data['telegram'],
-            $data['phone']
         );
 
         return redirect()->route('admin.users.edit', $user->id)
@@ -120,7 +127,7 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $data = request()->only(['name', 'surname', 'email', 'phone', 'skype', 'whatsapp', 'telegram']);
+        $data = request()->only(['name', 'surname', 'email', 'phone', 'skype', 'whatsapp', 'telegram', 'birthdate']);
         $data['groups'] = request('groups', []);
         $data['permissions'] = request('permissions', []);
         $data['location_id'] = request('location');

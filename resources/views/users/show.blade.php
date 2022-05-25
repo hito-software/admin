@@ -35,37 +35,44 @@
             <div class="border py-2 px-4 rounded w-full">{{ $user->email }}</div>
         </div>
 
-        @if(isset($user->phone))
+        @if(!is_null($user->getContact('phone')))
         <div>
             <label class="block">Phone Number</label>
-            <div class="border py-2 px-4 rounded w-full">{{ $user->phone }}</div>
+            <div class="border py-2 px-4 rounded w-full">{{ $user->getContact('phone') }}</div>
         </div>
         @endif
 
-        @if(isset($user->skype))
-            <div>
-                <label class="block">Skype</label>
-                <div class="border py-2 px-4 rounded w-full">
-                    <a href="skype:{{$user->skype}}?chat">{{$user->skype}}</a>
-                </div>
-            </div>
-        @endif
-
-        @if(isset($user->whatsapp))
+        @if(!is_null($user->getContact('whatsapp')))
             <div>
                 <label class="block">Whatsapp</label>
                 <div class="border py-2 px-4 rounded w-full">
-                    <a href="whatsapp://{{$user->whatsapp}}">{{$user->whatsapp}}</a>
+                    <a href="whatsapp://{{$user->whatsapp}}">{{ $user->getContact('whatsapp') }}</a>
                 </div>
             </div>
         @endif
 
-        @if(isset($user->telegram))
+        @if(!is_null($user->getContact('telegram')))
             <div>
                 <label class="block">Telegram</label>
                 <div class="border py-2 px-4 rounded w-full">
-                    <a href="https://t.me/{{$user->telegram}}">{{$user->telegram}}</a>
+                    <a href="https://t.me/{{$user->telegram}}">{{ $user->getContact('telegram') }}</a>
                 </div>
+            </div>
+        @endif
+
+        @if(!is_null($user->getContact('skype')))
+            <div>
+                <label class="block">Skype</label>
+                <div class="border py-2 px-4 rounded w-full">
+                    <a href="skype:{{$user->skype}}?chat">{{ $user->getContact('skype') }}</a>
+                </div>
+            </div>
+        @endif
+
+        @if(!is_null($user->birthdate))
+            <div>
+                <label class="block">Birthdate</label>
+                <div class="border py-2 px-4 rounded w-full">{{ $user->birthdate }}</div>
             </div>
         @endif
 

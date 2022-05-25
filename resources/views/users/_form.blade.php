@@ -1,12 +1,13 @@
 <x-hito::Form.Input title="Name" name="name" :required="true" value="{{ $user->name }}" />
 <x-hito::Form.Input title="Surname" name="surname" :required="true" value="{{ $user->surname }}" />
 <x-hito::Form.Input title="Email address" name="email" :required="true" value="{{ $user->email }}" />
+<x-hito::Form.Input title="Phone Number" name="phone" value="{{ $user->getContact('phone') }}" />
+<x-hito::Form.Input title="Whatsapp" name="whatsapp" value="{{ $user->getContact('whatsapp') }}" />
+<x-hito::Form.Input title="Telegram" name="telegram" value="{{ $user->getContact('telegram') }}" />
+<x-hito::Form.Input title="Skype" name="skype" value="{{ $user->getContact('skype') }}" />
+<x-hito::Form.DatePicker title="Birthdate" name="birthdate" :value="$user->birthdate" />
 <x-hito::Form.Select.Location name="location" :value="$user->location_id" :required="true"/>
 <x-hito::Form.Select.Timezone name="timezone" :value="$user->timezone_id" :required="true"/>
-<x-hito::Form.Input title="Skype" name="skype" value="{{ $user->skype }}" />
-<x-hito::Form.Input title="Whatsapp" name="whatsapp" value="{{ $user->whatsapp }}" />
-<x-hito::Form.Input title="Telegram" name="telegram" value="{{ $user->telegram }}" />
-<x-hito::Form.Input title="Phone Number" name="phone" value="{{ $user->phone }}" />
 
 @can('manage-groups', \App\Models\User::class)
     @if(!empty($groups))
