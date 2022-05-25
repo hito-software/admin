@@ -55,7 +55,7 @@
             }
 
             &__item:nth-child(2n) {
-                @apply bg-blue-100;
+                @apply bg-blue-100 hover:bg-blue-200;
             }
 
             &__view-container {
