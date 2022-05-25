@@ -4,6 +4,7 @@ namespace Hito\Admin\Http\Controllers;
 
 use Carbon\Carbon;
 use Hito\Admin\Enums\Status;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreProcedureRequest;
 use Hito\Admin\Http\Requests\UpdateProcedureRequest;
 use Hito\Platform\Models\Procedure;
@@ -17,6 +18,9 @@ use Illuminate\Validation\ValidationException;
 
 class ProcedureController extends Controller
 {
+    private string $entitySingular = 'Procedure';
+    private string $entityPlural = 'Procedures';
+
     public function __construct(private readonly ProcedureService $procedureService)
     {
         $this->authorizeResource(Procedure::class);
@@ -38,7 +42,33 @@ class ProcedureController extends Controller
 
         $procedures = $this->procedureService->getPaginated($status);
 
-        return view('hito-admin::procedures.index', compact('procedures'));
+        return AdminResourceFactory::index($procedures, function (Procedure $procedure) {
+            return view('hito-admin::procedures._index-item', compact('procedure'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.procedures.create'))
+            ->showUrl(function (Procedure $procedure) {
+                if (!auth()->user()->can('show', $procedure)) {
+                    return null;
+                }
+
+                return route('admin.procedures.show', $procedure->id);
+            })
+            ->editUrl(function (Procedure $procedure) {
+                if (!auth()->user()->can('edit', $procedure)) {
+                    return null;
+                }
+
+                return route('admin.procedures.edit', $procedure->id);
+            })
+            ->deleteUrl(function (Procedure $procedure) {
+                if (!auth()->user()->can('delete', $procedure)) {
+                    return null;
+                }
+
+                return route('admin.procedures.delete', $procedure->id);
+            })
+            ->build();
     }
 
     /**
@@ -46,7 +76,11 @@ class ProcedureController extends Controller
      */
     public function create(Procedure $procedure)
     {
-        return view('hito-admin::procedures.create', compact('procedure'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.procedures.store'))
+            ->view(view('hito-admin::procedures._form', compact('procedure')))
+            ->build();
     }
 
     /**
@@ -66,8 +100,9 @@ class ProcedureController extends Controller
             $data['locations'] ?? null
         );
 
-        return redirect()->route('admin.procedures.edit', $procedure->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Procedure']));
+        return AdminResourceFactory::store('admin.procedures.edit', $procedure->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -76,7 +111,14 @@ class ProcedureController extends Controller
      */
     public function show(Procedure $procedure)
     {
-        return view('hito-admin::procedures.show', compact('procedure'));
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($procedure->name)
+            ->view(view('hito-admin::procedures._show', compact('procedure')))
+            ->editUrl(route('admin.procedures.edit', $procedure->id))
+            ->deleteUrl(route('admin.procedures.delete', $procedure->id))
+            ->indexUrl(route('admin.procedures.index'))
+            ->build();
     }
 
     /**
@@ -87,7 +129,11 @@ class ProcedureController extends Controller
      */
     public function edit(Procedure $procedure)
     {
-        return view('hito-admin::procedures.edit', compact('procedure'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.procedures.update', compact('procedure')))
+            ->view(view('hito-admin::procedures._form', compact('procedure')))
+            ->build();
     }
 
     /**
@@ -103,7 +149,9 @@ class ProcedureController extends Controller
 
         $this->procedureService->update($procedure->id, $data);
 
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Procedure']));
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -115,11 +163,12 @@ class ProcedureController extends Controller
     {
         $this->authorize('delete', $procedure);
 
-        return view('hito::_shared.delete-entity', [
-            'action' => route('admin.procedures.destroy', $procedure->id),
-            'noAction' => route('admin.procedures.show', $procedure->id),
-            'entity' => 'procedure'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.procedures.destroy', compact('procedure')))
+            ->cancelUrl(route('admin.procedures.show', $procedure->id))
+            ->build();
     }
 
     /**
@@ -132,8 +181,9 @@ class ProcedureController extends Controller
     {
         $procedure->delete();
 
-        return redirect()->route('admin.procedures.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Procedure']));
+        return AdminResourceFactory::destroy('admin.procedures.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     private function getDataFromRequest(Request $request): array
