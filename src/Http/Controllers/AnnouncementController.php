@@ -2,20 +2,22 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Carbon\Carbon;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreAnnouncementRequest;
 use Hito\Admin\Http\Requests\UpdateAnnouncementRequest;
 use Hito\Platform\Models\Announcement;
 use Hito\Platform\Services\AnnouncementService;
-use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class AnnouncementController extends Controller
 {
+    private string $entitySingular = 'Announcement';
+    private string $entityPlural = 'Announcements';
+
     public function __construct(private readonly AnnouncementService $announcementService)
     {
         $this->authorizeResource(Announcement::class);
@@ -28,7 +30,33 @@ class AnnouncementController extends Controller
     {
         $announcements = $this->announcementService->getPaginated(orderBy: 'created_at');
 
-        return view('hito-admin::announcements.index', compact('announcements'));
+        return AdminResourceFactory::index($announcements, function (Announcement $announcement) {
+            return view('hito-admin::announcements._index-item', compact('announcement'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.announcements.create'))
+            ->showUrl(function (Announcement $announcement) {
+                if (!auth()->user()->can('show', $announcement)) {
+                    return null;
+                }
+
+                return route('admin.announcements.show', $announcement->id);
+            })
+            ->editUrl(function (Announcement $announcement) {
+                if (!auth()->user()->can('edit', $announcement)) {
+                    return null;
+                }
+
+                return route('admin.announcements.edit', $announcement->id);
+            })
+            ->deleteUrl(function (Announcement $announcement) {
+                if (!auth()->user()->can('delete', $announcement)) {
+                    return null;
+                }
+
+                return route('admin.announcements.delete', $announcement->id);
+            })
+            ->build();
     }
 
     /**
@@ -38,13 +66,16 @@ class AnnouncementController extends Controller
     {
         $announcement->fill(['published_at' => Carbon::now()]);
 
-        return view('hito-admin::announcements.create', compact('announcement'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.announcements.store'))
+            ->view(view('hito-admin::announcements._form', compact('announcement')))
+            ->build();
     }
 
     /**
-     * @param Request $request
+     * @param StoreAnnouncementRequest $request
      * @return RedirectResponse
-     * @throws ValidationException
      */
     public function store(StoreAnnouncementRequest $request)
     {
@@ -61,8 +92,9 @@ class AnnouncementController extends Controller
             auth()->id()
         );
 
-        return redirect()->route('admin.announcements.edit', $announcement->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Announcement']));
+        return AdminResourceFactory::store('admin.announcements.edit', $announcement->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -71,7 +103,14 @@ class AnnouncementController extends Controller
      */
     public function show(Announcement $announcement)
     {
-        return view('hito-admin::announcements.show', compact('announcement'));
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($announcement->name)
+            ->view(view('hito-admin::announcements._show', compact('announcement')))
+            ->editUrl(route('admin.announcements.edit', $announcement->id))
+            ->deleteUrl(route('admin.announcements.delete', $announcement->id))
+            ->indexUrl(route('admin.announcements.index'))
+            ->build();
     }
 
     /**
@@ -82,7 +121,11 @@ class AnnouncementController extends Controller
      */
     public function edit(Announcement $announcement)
     {
-        return view('hito-admin::announcements.edit', compact('announcement'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.announcements.update', compact('announcement')))
+            ->view(view('hito-admin::announcements._form', compact('announcement')))
+            ->build();
     }
 
     /**
@@ -98,7 +141,9 @@ class AnnouncementController extends Controller
 
         $this->announcementService->update($announcement->id, $data);
 
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Announcement']));
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -110,11 +155,12 @@ class AnnouncementController extends Controller
     {
         $this->authorize('delete', $announcement);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.announcements.destroy', $announcement->id),
-            'noAction' => route('admin.announcements.show', $announcement->id),
-            'entity' => 'announcement'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.announcements.destroy', compact('announcement')))
+            ->cancelUrl(route('admin.announcements.show', $announcement->id))
+            ->build();
     }
 
     /**
@@ -127,8 +173,9 @@ class AnnouncementController extends Controller
     {
         $announcement->delete();
 
-        return redirect()->route('admin.announcements.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Announcement']));
+        return AdminResourceFactory::destroy('admin.announcements.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     private function getDataFromRequest(Request $request): array

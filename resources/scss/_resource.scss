@@ -45,6 +45,10 @@
             @apply my-4 space-y-2;
         }
 
+        &__wrapper {
+            @apply space-y-4 p-5;
+        }
+
         &__index {
             @apply space-y-1 px-5 py-3;
 
