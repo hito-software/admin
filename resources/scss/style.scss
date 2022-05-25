@@ -1,5 +1,9 @@
+@use 'resource';
+
 $rootSelector: '.hito-admin';
 
 #{$rootSelector} {
 
 }
+
+@include resource.styles($rootSelector);

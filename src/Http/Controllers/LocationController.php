@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreLocationRequest;
 use Hito\Admin\Http\Requests\UpdateLocationRequest;
 use Hito\Platform\Models\Location;
@@ -11,12 +11,12 @@ use Hito\Platform\Services\LocationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class LocationController extends Controller
 {
+    private string $entitySingular = 'Location';
+    private string $entityPlural = 'Locations';
+
     public function __construct(
         private readonly LocationService $locationService,
         private readonly CountryService  $countryService)
@@ -33,7 +33,33 @@ class LocationController extends Controller
     {
         $locations = $this->locationService->getAllPaginated();
 
-        return view('hito-admin::locations.index', compact('locations'));
+        return AdminResourceFactory::index($locations, function (Location $location) {
+            return view('hito-admin::locations._index-item', compact('location'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.locations.create'))
+            ->showUrl(function (Location $location) {
+                if (!auth()->user()->can('show', $location)) {
+                    return null;
+                }
+
+                return route('admin.locations.show', $location->id);
+            })
+            ->editUrl(function (Location $location) {
+                if (!auth()->user()->can('edit', $location)) {
+                    return null;
+                }
+
+                return route('admin.locations.edit', $location->id);
+            })
+            ->deleteUrl(function (Location $location) {
+                if (!auth()->user()->can('delete', $location)) {
+                    return null;
+                }
+
+                return route('admin.locations.delete', $location->id);
+            })
+            ->build();
     }
 
     /**
@@ -47,7 +73,11 @@ class LocationController extends Controller
             'label' => $country->name
         ])->toArray();
 
-        return view('hito-admin::locations.create', compact('location', 'countries'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.locations.store'))
+            ->view(view('hito-admin::locations._form', compact('location','countries')))
+            ->build();
     }
 
     /**
@@ -58,10 +88,11 @@ class LocationController extends Controller
     public function store(StoreLocationRequest $request, Location $location): RedirectResponse
     {
         $location = $this->locationService->create(request('name'),
-            request('country'), request('address'), request('description'), auth()->user()->id);
+            request('country'), request('address'), request('description'));
 
-        return redirect()->route('admin.locations.edit', $location->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Location']));
+        return AdminResourceFactory::store('admin.locations.edit', $location->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -72,9 +103,14 @@ class LocationController extends Controller
      */
     public function show(Location $location): View
     {
-        $users = $location->users;
-
-        return view('hito-admin::locations.show', compact('location', 'users'));
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($location->name)
+            ->view(view('hito-admin::locations._show', compact('location')))
+            ->editUrl(route('admin.locations.edit', $location->id))
+            ->deleteUrl(route('admin.locations.delete', $location->id))
+            ->indexUrl(route('admin.locations.index'))
+            ->build();
     }
 
     /**
@@ -90,7 +126,11 @@ class LocationController extends Controller
             'label' => $country->name
         ])->toArray();
 
-        return view('hito-admin::locations.edit', compact('location', 'countries'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.locations.update', compact('location')))
+            ->view(view('hito-admin::locations._form', compact('location','countries')))
+            ->build();
     }
 
     /**
@@ -105,7 +145,9 @@ class LocationController extends Controller
 
         $this->locationService->update($location->id, $data);
 
-        return redirect()->back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Location']));
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -117,11 +159,12 @@ class LocationController extends Controller
     {
         $this->authorize('delete', $location);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.locations.destroy', $location->id),
-            'noAction' => route('admin.locations.show', $location->id),
-            'entity' => 'location'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.locations.destroy', compact('location')))
+            ->cancelUrl(route('admin.locations.show', $location->id))
+            ->build();
     }
 
     /**
@@ -134,7 +177,8 @@ class LocationController extends Controller
     {
         $location->delete();
 
-        return redirect()->route('admin.locations.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Location']));
+        return AdminResourceFactory::destroy('admin.locations.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 }

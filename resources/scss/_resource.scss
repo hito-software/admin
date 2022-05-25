@@ -1,0 +1,130 @@
+@mixin defaultBtn() {
+    @apply bg-gray-600 hover:bg-gray-500;
+}
+
+@mixin createBtn() {
+    @apply bg-blue-600 hover:bg-blue-500;
+}
+
+@mixin editBtn() {
+    @apply bg-sky-600 hover:bg-sky-500;
+}
+
+@mixin deleteBtn() {
+    @apply bg-red-600 hover:bg-red-500;
+}
+
+@mixin openBtn() {
+    @apply bg-green-600 hover:bg-green-500;
+}
+
+@mixin styles($parent) {
+    #{$parent}__resource {
+        &__header-btn {
+            @apply py-2 px-4 rounded text-white uppercase text-sm font-bold tracking-wide;
+            @include defaultBtn;
+        }
+
+        &__header-btn--create {
+            @include createBtn;
+        }
+
+        &__header-btn--edit {
+            @include editBtn;
+        }
+
+        &__header-btn--delete {
+            @include deleteBtn;
+        }
+
+        &__header-btn--open {
+            @include openBtn;
+        }
+
+        &__container {
+            @apply my-4 space-y-2;
+        }
+
+        &__index {
+            @apply space-y-1 px-5 py-3;
+
+            &__item {
+                @apply flex flex-col gap-2 overflow-auto rounded-lg border border-blue-100 p-2 transition duration-150
+                hover:bg-blue-200;
+                @apply lg:flex-row lg:items-center;
+            }
+
+            &__item:nth-child(2n) {
+                @apply bg-blue-100;
+            }
+
+            &__view-container {
+                @apply flex flex-1 flex-col gap-2;
+                @apply sm:flex-row sm:items-center;
+            }
+
+            &__actions {
+                @apply flex justify-evenly gap-1 rounded-lg bg-blue-600/25 p-2;
+                @apply lg:items-center lg:justify-start lg:bg-transparent;
+            }
+
+            &__btn {
+                @apply flex w-full items-center justify-center gap-1 rounded-lg p-2 text-xs font-bold uppercase text-white;
+                @include defaultBtn;
+            }
+
+            &__btn--create {
+                @include createBtn;
+            }
+
+            &__btn--edit {
+                @include editBtn;
+            }
+
+            &__btn--delete {
+                @include deleteBtn;
+            }
+
+            &__btn--open {
+                @include openBtn;
+            }
+
+            &__btn-label {
+                @apply truncate;
+                @apply lg:hidden;
+            }
+
+            &__pill {
+                @apply flex items-center justify-center gap-1 rounded bg-gray-600 p-1 text-xs font-bold text-white;
+            }
+
+            &__pill--green {
+                @apply bg-green-600;
+            }
+
+            &__pill--blue {
+                @apply bg-blue-600;
+            }
+
+            &__pill--red {
+                @apply bg-red-600;
+            }
+
+            &__pill--sky {
+                @apply bg-sky-600;
+            }
+
+            &__pill--cyan {
+                @apply bg-cyan-600;
+            }
+
+            &__item-title {
+                @apply flex-1 text-left;
+            }
+
+            &__item-pills {
+                @apply flex flex-1 select-none flex-wrap items-center gap-1 text-left;
+            }
+        }
+    }
+}
