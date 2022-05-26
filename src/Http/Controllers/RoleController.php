@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreRoleRequest;
 use Hito\Admin\Http\Requests\UpdateRoleRequest;
 use Hito\Platform\Models\Role;
@@ -11,11 +11,13 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
+    private string $entitySingular = 'Role';
+    private string $entityPlural = 'Roles';
+
     public function __construct(private readonly RoleService $roleService)
     {
         $this->authorizeResource(Role::class);
@@ -34,7 +36,33 @@ class RoleController extends Controller
 
         $roles = $this->roleService->getAllByType($type);
 
-        return view('hito-admin::roles.index', compact('roles', 'type'));
+        return AdminResourceFactory::index($roles, function (Role $role) {
+            return view('hito-admin::roles._index-item', compact('role'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.roles.create', compact('type')))
+            ->showUrl(function (Role $role) {
+                if (!auth()->user()->can('show', $role)) {
+                    return null;
+                }
+
+                return route('admin.roles.show', $role->id);
+            })
+            ->editUrl(function (Role $role) {
+                if (!auth()->user()->can('edit', $role)) {
+                    return null;
+                }
+
+                return route('admin.roles.edit', $role->id);
+            })
+            ->deleteUrl(function (Role $role) {
+                if (!auth()->user()->can('delete', $role)) {
+                    return null;
+                }
+
+                return route('admin.roles.delete', $role->id);
+            })
+            ->build();
     }
 
     /**
@@ -49,7 +77,11 @@ class RoleController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        return view('hito-admin::roles.create', compact('role', 'type'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.roles.store'))
+            ->view(view('hito-admin::roles._form', compact('role', 'type')))
+            ->build();
     }
 
     /**
@@ -65,8 +97,9 @@ class RoleController extends Controller
             request('required')
         );
 
-        return redirect()->route('admin.roles.edit', $role->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Project']));
+        return AdminResourceFactory::store('admin.roles.edit', $role->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -75,7 +108,16 @@ class RoleController extends Controller
      */
     public function show(Role $role): View
     {
-        return view('hito-admin::roles.show', compact('role'));
+        $type = $this->roleService->mapClassTypeToType($role->entity_type);
+
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($role->name)
+            ->view(view('hito-admin::roles._show', compact('role')))
+            ->editUrl(route('admin.roles.edit', $role->id))
+            ->deleteUrl(route('admin.roles.delete', $role->id))
+            ->indexUrl(route('admin.roles.index', compact('type')))
+            ->build();
     }
 
     /**
@@ -87,7 +129,11 @@ class RoleController extends Controller
     {
         $type = $request->query('type');
 
-        return view('hito-admin::roles.edit', compact('role', 'type'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.roles.update', compact('role')))
+            ->view(view('hito-admin::roles._form', compact('role', 'type')))
+            ->build();
     }
 
     /**
@@ -104,7 +150,10 @@ class RoleController extends Controller
         ]);
 
         $this->roleService->update($role->id, $data);
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Role']));
+
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -116,11 +165,12 @@ class RoleController extends Controller
     {
         $this->authorize('delete', $role);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.roles.destroy', $role->id),
-            'noAction' => route('admin.roles.show', $role->id),
-            'entity' => 'role'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.roles.destroy', compact('role')))
+            ->cancelUrl(route('admin.roles.show', $role->id))
+            ->build();
     }
 
     /**
@@ -132,7 +182,8 @@ class RoleController extends Controller
         $type = $this->roleService->mapClassTypeToType($role->entity_type);
         $role->delete();
 
-        return redirect()->route('admin.roles.index', compact('type'))
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Role']));
+        return AdminResourceFactory::destroy('admin.locations.index', compact('type'))
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 }

@@ -15,7 +15,7 @@ class UpdateRoleRequest extends StoreRoleRequest
     public function rules()
     {
         return [
-            ...parent::rules(),
+            ...\Arr::except(parent::rules(), ['type']),
             'name' => [
                 'required',
                 Rule::unique('roles')->ignoreModel($this->role)->where(function ($query) {
