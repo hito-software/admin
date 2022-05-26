@@ -1,4 +1,4 @@
-@extends('hito-admin::_layout')
+@extends('hito-admin::_resource._layout')
 
 @section('title', $title ?? __('hito-admin::resource.create-entity', ['entity' => $entity['singular']]))
 @section('page-title', $pageTitle ?? __('hito-admin::resource.create-entity', ['entity' => $entity['singular']]))

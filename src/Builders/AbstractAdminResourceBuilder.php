@@ -12,12 +12,15 @@ abstract class AbstractAdminResourceBuilder
     protected string $entityPlural;
     protected ?string $title = null;
     protected ?string $pageTitle = null;
+    protected array $actions = [];
 
-    protected function getData(): array {
+    protected function getData(): array
+    {
         return [];
     }
 
-    protected function getBaseView(): ?string {
+    protected function getBaseView(): ?string
+    {
         return null;
     }
 
@@ -41,6 +44,18 @@ abstract class AbstractAdminResourceBuilder
         return $this;
     }
 
+    public function action(
+        string  $label,
+        string  $url,
+        ?string $icon = null,
+        ?string $color = null,
+        ?string $bgColor = null,
+        string  $method = 'GET'): self
+    {
+        $this->actions[] = compact('label', 'url', 'icon', 'color', 'bgColor', 'method');
+        return $this;
+    }
+
     public function build(): View|RedirectResponse|Redirector
     {
         return view(
@@ -50,6 +65,7 @@ abstract class AbstractAdminResourceBuilder
                     'singular' => $this->entitySingular ?? null,
                     'plural' => $this->entityPlural ?? null
                 ],
+                'actions' => $this->actions,
                 'title' => $this->title,
                 'pageTitle' => $this->pageTitle ?? $this->title,
                 ...$this->getData()

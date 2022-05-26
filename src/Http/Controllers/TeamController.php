@@ -64,6 +64,7 @@ class TeamController extends Controller
 
                 return route('admin.teams.delete', $team->id);
             })
+            ->action('Manage roles', route('admin.roles.index', ['type' => 'team']), 'fas fa-users')
             ->build();
     }
 

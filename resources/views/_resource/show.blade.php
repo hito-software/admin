@@ -1,7 +1,4 @@
-@extends('hito-admin::_layout')
-
-@section('title', $title)
-@section('page-title', $pageTitle)
+@extends('hito-admin::_resource._layout')
 
 @section('actions')
     @if(!empty($editUrl))

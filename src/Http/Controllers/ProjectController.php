@@ -67,6 +67,7 @@ class ProjectController extends Controller
 
                 return route('admin.projects.delete', $project->id);
             })
+            ->action('Manage roles', route('admin.roles.index', ['type' => 'project']), 'fas fa-users')
             ->build();
     }
 

@@ -1,4 +1,4 @@
-@extends('hito-admin::_layout')
+@extends('hito-admin::_resource._layout')
 
 @section('title', $title ?? $entity['plural'] ?? null)
 @section('page-title', $pageTitle ?? ucfirst($entity['plural']) ?? null)
