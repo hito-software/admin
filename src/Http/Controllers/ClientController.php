@@ -80,12 +80,11 @@ class ClientController extends Controller
 
     /**
      * @param StoreClientRequest $request
-     * @param Client $client
      * @return RedirectResponse
      */
-    public function store(StoreClientRequest $request, Client $client)
+    public function store(StoreClientRequest $request)
     {
-        $this->clientService->create(
+        $client = $this->clientService->create(
             request('name'),
             request('description'),
             request('country'),
