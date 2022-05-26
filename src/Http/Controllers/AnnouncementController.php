@@ -194,13 +194,8 @@ class AnnouncementController extends Controller
             $data['published_at'] = Carbon::parse(request('published_at'));
         }
 
-        if (!empty($data['pin_start_at'])) {
-            $data['pin_start_at'] = Carbon::parse(request('pin_start_at'));
-        }
-
-        if (!empty($data['pin_end_at'])) {
-            $data['pin_end_at'] = Carbon::parse(request('pin_end_at'));
-        }
+        $data['pin_start_at'] = request('pin_start_at') ? Carbon::parse(request('pin_start_at')) : null;
+        $data['pin_end_at'] = request('pin_end_at') ? Carbon::parse(request('pin_end_at')) : null;
 
         $data['locations'] = array_filter(request('locations', []), fn($location) => !is_null($location));
 
