@@ -29,18 +29,9 @@ class ProcedureController extends Controller
     /**
      * @return View
      */
-    public function index(Procedure $procedure)
+    public function index()
     {
-        $canEdit = auth()->user()->can('update', $procedure);
-        $canCreate = auth()->user()->can('create', $procedure);
-
-        $status = 'PUBLISHED';
-
-        if ($canEdit || $canCreate) {
-            $status = null;
-        }
-
-        $procedures = $this->procedureService->getPaginated($status);
+        $procedures = $this->procedureService->getPaginated();
 
         return AdminResourceFactory::index($procedures, function (Procedure $procedure) {
             return view('hito-admin::procedures._index-item', compact('procedure'));
