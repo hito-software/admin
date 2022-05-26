@@ -98,10 +98,12 @@ class ProjectController extends Controller
             'label' => $team->name
         ])->toArray();
 
+        $members = collect(); // @phpstan-ignore-line
+
         return AdminResourceFactory::create()
             ->entity($this->entitySingular, $this->entityPlural)
             ->storeUrl(route('admin.projects.store'))
-            ->view(view('hito-admin::projects._form', compact('project', 'clients', 'countries', 'roles', 'users', 'teams')))
+            ->view(view('hito-admin::projects._form', compact('project', 'clients', 'countries', 'roles', 'users', 'teams', 'members')))
             ->build();
     }
 
@@ -112,6 +114,8 @@ class ProjectController extends Controller
      */
     public function store(StoreProjectRequest $request): RedirectResponse
     {
+        $this->validateRoles($request);
+
         $project = $this->projectService->create(
             request('name'),
             request('client'),
@@ -120,8 +124,6 @@ class ProjectController extends Controller
             request('team'),
             request('description')
         );
-
-        $this->validateRoles($request);
 
         $this->syncRoles($request, $project);
 

@@ -83,11 +83,12 @@ class TeamController extends Controller
             'value' => $project->id,
             'label' => $project->name
         ])->toArray();
+        $members = collect(); // @phpstan-ignore-line
 
         return AdminResourceFactory::create()
             ->entity($this->entitySingular, $this->entityPlural)
             ->storeUrl(route('admin.teams.store'))
-            ->view(view('hito-admin::teams._form', compact('team', 'projects', 'roles', 'users')))
+            ->view(view('hito-admin::teams._form', compact('team', 'projects', 'roles', 'users', 'members')))
             ->build();
     }
 
@@ -98,12 +99,12 @@ class TeamController extends Controller
      */
     public function store(StoreTeamRequest $request): RedirectResponse
     {
+        $this->validateRoles($request);
+
         $team = $this->teamService->create(
             request('name'),
             request('description')
         );
-
-        $this->validateRoles($request);
 
         $this->syncRoles($request, $team);
 

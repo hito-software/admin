@@ -9,7 +9,7 @@
 @endcan
 <x-hito::Form.Input title="Description" name="description" type="textarea" value="{{ $project->description }}" />
 
-@if($roles->count() && $project->exists)
+@if($roles->count())
 <x-hito::form.group>
     @if(!empty($title))
     <x-hito::form.label>Members</x-hito::form.label>
@@ -30,9 +30,7 @@
             </select>
             <x-hito::form.error name="roles_{{ $role->id }}"></x-hito::form.error>
             @if($role->required && !$members->contains(fn($value) => $value['role_id'] === $role->id))
-            <div class="rounded bg-yellow-500 py-2 px-4 text-white font-bold">This role requires at
-                least one member.
-            </div>
+                <x-hito::alert type="warn">This role requires at least one member.</x-hito::alert>
             @endif
         </div>
         @endforeach
