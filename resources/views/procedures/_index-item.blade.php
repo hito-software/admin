@@ -3,7 +3,8 @@
     <div class="hito-admin__resource__index__item-pills">
         @forelse($procedure->locations as $location)
             <a href="{{ route('admin.locations.show', $location->id) }}"
-               class="hito-admin__resource__index__pill hito-admin__resource__index__pill--blue">
+               class="hito-admin__resource__index__pill hito-admin__resource__index__pill--blue"
+               title="Location" data-tooltip>
                 <i class="fa-solid fa-location-dot"></i>
                 <span>{{ $location->name }} </span>
             </a>

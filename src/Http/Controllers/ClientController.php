@@ -14,8 +14,8 @@ use Illuminate\Http\RedirectResponse;
 
 class ClientController extends Controller
 {
-    private string $entitySingular = 'Location';
-    private string $entityPlural = 'Locations';
+    private string $entitySingular = 'Client';
+    private string $entityPlural = 'Clients';
 
     public function __construct(
         private readonly ClientService  $clientService,

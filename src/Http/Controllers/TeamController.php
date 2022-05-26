@@ -18,8 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class TeamController extends Controller
 {
-    private string $entitySingular = 'Location';
-    private string $entityPlural = 'Locations';
+    private string $entitySingular = 'Team';
+    private string $entityPlural = 'Teams';
 
     public function __construct(
         private readonly TeamService    $teamService,

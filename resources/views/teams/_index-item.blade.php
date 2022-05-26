@@ -8,7 +8,7 @@
         </span>
         <span class="hito-admin__resource__index__pill hito-admin__resource__index__pill--blue"
               title="Projects" data-tooltip>
-            <i class="fa-solid fa-user"></i>
+            <i class="fa-solid fa-briefcase"></i>
             <span>{{ $team->projects->count() }} projects</span>
         </span>
     </div>
