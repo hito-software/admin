@@ -1,7 +1,7 @@
 @extends('hito-admin::_layout')
 
-@section('title', $entity['plural'])
-@section('page-title', ucfirst($entity['plural']))
+@section('title', $title ?? $entity['plural'] ?? null)
+@section('page-title', $pageTitle ?? ucfirst($entity['plural']) ?? null)
 
 @section('actions')
     @if(!empty($createUrl))
@@ -16,7 +16,7 @@
 @section('content')
     <div class="hito-admin__resource__container">
         <x-hito::Card>
-            @if ($items->hasPages())
+            @if ($hasPagination && $items->hasPages())
                 <x-slot name="footerSlot">
                     <div class="w-full">
                         {{ $items->onEachSide(1)->links() }}

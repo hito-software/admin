@@ -5,7 +5,7 @@
 <x-hito::Form.Input title="Whatsapp" name="whatsapp" value="{{ $user->getContact('whatsapp') }}" />
 <x-hito::Form.Input title="Telegram" name="telegram" value="{{ $user->getContact('telegram') }}" />
 <x-hito::Form.Input title="Skype" name="skype" value="{{ $user->getContact('skype') }}" />
-<x-hito::Form.DatePicker title="Birthdate" name="birthdate" :value="$user->birthdate" />
+<x-hito::Form.DatePicker title="Birthdate" name="birthdate" :value="$user->birthdate?->format('Y-m-d')" />
 <x-hito::Form.Select.Location name="location" :value="$user->location_id" :required="true"/>
 <x-hito::Form.Select.Timezone name="timezone" :value="$user->timezone_id" :required="true"/>
 

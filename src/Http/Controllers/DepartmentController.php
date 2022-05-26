@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreDepartmentRequest;
 use Hito\Admin\Http\Requests\UpdateDepartmentRequest;
 use Hito\Platform\Models\Department;
@@ -11,13 +11,12 @@ use Hito\Platform\Services\UserService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class DepartmentController extends Controller
 {
+    private string $entitySingular = 'Department';
+    private string $entityPlural = 'Departments';
+
     public function __construct(
         private readonly DepartmentService $departmentService,
         private readonly UserService       $userService)
@@ -34,7 +33,33 @@ class DepartmentController extends Controller
     {
         $departments = $this->departmentService->getAllPaginated();
 
-        return view('hito-admin::departments.index', compact('departments'));
+        return AdminResourceFactory::index($departments, function (Department $department) {
+            return view('hito-admin::departments._index-item', compact('department'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.departments.create'))
+            ->showUrl(function (Department $department) {
+                if (!auth()->user()->can('show', $department)) {
+                    return null;
+                }
+
+                return route('admin.departments.show', $department->id);
+            })
+            ->editUrl(function (Department $department) {
+                if (!auth()->user()->can('edit', $department)) {
+                    return null;
+                }
+
+                return route('admin.departments.edit', $department->id);
+            })
+            ->deleteUrl(function (Department $department) {
+                if (!auth()->user()->can('delete', $department)) {
+                    return null;
+                }
+
+                return route('admin.departments.delete', $department->id);
+            })
+            ->build();
     }
 
     /**
@@ -48,7 +73,11 @@ class DepartmentController extends Controller
             'label' => "{$user->name} {$user->surname}"
         ])->toArray();
 
-        return view('hito-admin::departments.create', compact('department', 'users'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.departments.store'))
+            ->view(view('hito-admin::departments._form', compact('department', 'users')))
+            ->build();
     }
 
     /**
@@ -64,8 +93,9 @@ class DepartmentController extends Controller
             request('members', [])
         );
 
-        return redirect()->route('admin.departments.edit', $department->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Department']));
+        return AdminResourceFactory::store('admin.departments.edit', $department->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -76,9 +106,19 @@ class DepartmentController extends Controller
      */
     public function show(Department $department): View
     {
-        $users = $department->users;
+        $users = $this->userService->getAll()->map(fn($user) => [
+            'value' => $user->id,
+            'label' => "{$user->name} {$user->surname}"
+        ])->toArray();
 
-        return view('hito-admin::departments.show', compact('department', 'users'));
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($department->name)
+            ->view(view('hito-admin::departments._show', compact('department', 'users')))
+            ->editUrl(route('admin.departments.edit', $department->id))
+            ->deleteUrl(route('admin.departments.delete', $department->id))
+            ->indexUrl(route('admin.departments.index'))
+            ->build();
     }
 
     /**
@@ -94,7 +134,11 @@ class DepartmentController extends Controller
             'label' => "{$user->name} {$user->surname}"
         ])->toArray();
 
-        return view('hito-admin::departments.edit', compact('department', 'users'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.departments.update', compact('department')))
+            ->view(view('hito-admin::departments._form', compact('department', 'users')))
+            ->build();
     }
 
     /**
@@ -108,7 +152,9 @@ class DepartmentController extends Controller
 
         $this->departmentService->update($department->id, $data);
 
-        return redirect()->back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Department']));
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -120,11 +166,12 @@ class DepartmentController extends Controller
     {
         $this->authorize('delete', $department);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.departments.destroy', $department->id),
-            'noAction' => route('admin.departments.show', $department->id),
-            'entity' => 'department'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.departments.destroy', compact('department')))
+            ->cancelUrl(route('admin.departments.show', $department->id))
+            ->build();
     }
 
     /**
@@ -137,7 +184,8 @@ class DepartmentController extends Controller
     {
         $department->delete();
 
-        return redirect()->route('admin.departments.index')
-            ->with('sucess', \Lang::get('forms.deleted_successfully', ['entity' => 'Department']));
+        return AdminResourceFactory::destroy('admin.departments.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 }

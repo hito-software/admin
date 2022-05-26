@@ -5,7 +5,7 @@
     :items="$countries" />
 <x-hito::Form.Input title="Address" name="address" value="{{ $project->address }}" />
 @can('project.manage-teams', \App\Models\Project::class)
-<x-hito::Form.Select title="Teams" name="teams[]" multiple :value="$project->teams->pluck('id')->toArray()" :items="$teams" />
+<x-hito::Form.Select title="Teams" name="teams" multiple :value="$project->teams->pluck('id')->toArray()" :items="$teams" />
 @endcan
 <x-hito::Form.Input title="Description" name="description" type="textarea" value="{{ $project->description }}" />
 

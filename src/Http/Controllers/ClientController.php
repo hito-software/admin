@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreClientRequest;
 use Hito\Admin\Http\Requests\UpdateClientRequest;
 use Hito\Platform\Models\Client;
@@ -11,12 +11,12 @@ use Hito\Platform\Services\CountryService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class ClientController extends Controller
 {
+    private string $entitySingular = 'Location';
+    private string $entityPlural = 'Locations';
+
     public function __construct(
         private readonly ClientService  $clientService,
         private readonly CountryService $countryService)
@@ -31,7 +31,33 @@ class ClientController extends Controller
     {
         $clients = $this->clientService->getAllPaginated();
 
-        return view('hito-admin::clients.index', compact('clients'));
+        return AdminResourceFactory::index($clients, function (Client $client) {
+            return view('hito-admin::clients._index-item', compact('client'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.clients.create'))
+            ->showUrl(function (Client $client) {
+                if (!auth()->user()->can('show', $client)) {
+                    return null;
+                }
+
+                return route('admin.clients.show', $client->id);
+            })
+            ->editUrl(function (Client $client) {
+                if (!auth()->user()->can('edit', $client)) {
+                    return null;
+                }
+
+                return route('admin.clients.edit', $client->id);
+            })
+            ->deleteUrl(function (Client $client) {
+                if (!auth()->user()->can('delete', $client)) {
+                    return null;
+                }
+
+                return route('admin.clients.delete', $client->id);
+            })
+            ->build();
     }
 
     /**
@@ -45,7 +71,11 @@ class ClientController extends Controller
             'label' => $country->name
         ])->toArray();
 
-        return view('hito-admin::clients.create', compact('client', 'countries'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.clients.store'))
+            ->view(view('hito-admin::clients._form', compact('client', 'countries')))
+            ->build();
     }
 
     /**
@@ -55,15 +85,16 @@ class ClientController extends Controller
      */
     public function store(StoreClientRequest $request, Client $client)
     {
-        $request = $this->clientService->create(
+        $this->clientService->create(
             request('name'),
             request('description'),
             request('country'),
             request('address')
         );
 
-        return redirect()->route('admin.clients.edit', $request->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Client']));
+        return AdminResourceFactory::store('admin.clients.edit', $client->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -72,9 +103,19 @@ class ClientController extends Controller
      */
     public function show(Client $client)
     {
-        $country = $client->country;
+        $countries = $this->countryService->getAll()->map(fn($country) => [
+            'value' => $country->id,
+            'label' => $country->name
+        ])->toArray();
 
-        return view('hito-admin::clients.show', compact('client', 'country'));
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($client->name)
+            ->view(view('hito-admin::clients._show', compact('client', 'countries')))
+            ->editUrl(route('admin.clients.edit', $client->id))
+            ->deleteUrl(route('admin.clients.delete', $client->id))
+            ->indexUrl(route('admin.clients.index'))
+            ->build();
     }
 
     /**
@@ -88,13 +129,17 @@ class ClientController extends Controller
             'label' => $country->name
         ])->toArray();
 
-        return view('hito-admin::clients.edit', compact('client', 'countries'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.clients.update', compact('client')))
+            ->view(view('hito-admin::clients._form', compact('client', 'countries')))
+            ->build();
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param Request $request
+     * @param UpdateClientRequest $request
      * @param Client $client
      * @return RedirectResponse
      */
@@ -104,7 +149,10 @@ class ClientController extends Controller
         $data['country_id'] = request('country');
 
         $this->clientService->update($client->id, $data);
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Client']));
+
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -116,11 +164,12 @@ class ClientController extends Controller
     {
         $this->authorize('delete', $client);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.clients.destroy', $client->id),
-            'noAction' => route('admin.clients.show', $client->id),
-            'entity' => 'client'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.clients.destroy', compact('client')))
+            ->cancelUrl(route('admin.clients.show', $client->id))
+            ->build();
     }
 
     /**
@@ -133,7 +182,8 @@ class ClientController extends Controller
     {
         $client->delete();
 
-        return redirect()->route('admin.clients.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Client']));
+        return AdminResourceFactory::destroy('admin.clients.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 }

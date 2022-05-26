@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreProjectRequest;
 use Hito\Admin\Http\Requests\UpdateProjectRequest;
 use Hito\Platform\Models\Project;
@@ -16,12 +16,13 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
+    private string $entitySingular = 'Project';
+    private string $entityPlural = 'Projects';
+
     public function __construct(
         private readonly ProjectService $projectService,
         private readonly ClientService  $clientService,
@@ -40,7 +41,33 @@ class ProjectController extends Controller
     {
         $projects = $this->projectService->getAllPaginated();
 
-        return view('hito-admin::projects.index', compact('projects'));
+        return AdminResourceFactory::index($projects, function (Project $project) {
+            return view('hito-admin::projects._index-item', compact('project'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.projects.create'))
+            ->showUrl(function (Project $project) {
+                if (!auth()->user()->can('show', $project)) {
+                    return null;
+                }
+
+                return route('admin.projects.show', $project->id);
+            })
+            ->editUrl(function (Project $project) {
+                if (!auth()->user()->can('edit', $project)) {
+                    return null;
+                }
+
+                return route('admin.projects.edit', $project->id);
+            })
+            ->deleteUrl(function (Project $project) {
+                if (!auth()->user()->can('delete', $project)) {
+                    return null;
+                }
+
+                return route('admin.projects.delete', $project->id);
+            })
+            ->build();
     }
 
     /**
@@ -70,7 +97,11 @@ class ProjectController extends Controller
             'label' => $team->name
         ])->toArray();
 
-        return view('hito-admin::projects.create', compact('project', 'clients', 'countries', 'roles', 'users', 'teams'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.projects.store'))
+            ->view(view('hito-admin::projects._form', compact('project', 'clients', 'countries', 'roles', 'users', 'teams')))
+            ->build();
     }
 
     /**
@@ -86,8 +117,7 @@ class ProjectController extends Controller
             request('country'),
             request('address'),
             request('team'),
-            request('description'),
-            auth()->id()
+            request('description')
         );
 
         $this->validateRoles($request);
@@ -98,8 +128,9 @@ class ProjectController extends Controller
 
         $this->projectService->syncTeams($project->id, $teams);
 
-        return redirect()->route('admin.projects.edit', $project->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Project']));
+        return AdminResourceFactory::store('admin.projects.edit', $project->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -108,14 +139,39 @@ class ProjectController extends Controller
      */
     public function show(Project $project): View
     {
-        $client = $project->client;
-        $country = $project->country;
-        $roles = $this->roleService->getAllByType('project');
-        $members = $project->members;
-        $teams = $project->teams;
+        $clients = $this->clientService->getAll()->map(fn($client) => [
+            'value' => $client->id,
+            'label' => $client->name
+        ])->toArray();
 
-        return view('hito-admin::projects.show', compact('project', 'client', 'country', 'roles',
-            'members', 'teams'));
+        $countries = $this->countryService->getAll()->map(fn($country) => [
+            'value' => $country->id,
+            'label' => $country->name
+        ])->toArray();
+
+        $roles = $this->roleService->getAllByType('project');
+
+        $users = $this->userService->getAll()->map(fn($user) => [
+            'value' => $user->id,
+            'label' => "{$user->name} {$user->surname}"
+        ])->toArray();
+
+        $members = $this->projectService->getMembersByProjectId($project->id);
+
+        $teams = $this->teamService->getAll()->map(fn($team) => [
+            'value' => $team->id,
+            'label' => $team->name
+        ])->toArray();
+
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($project->name)
+            ->view(view('hito-admin::projects._show', compact('project', 'clients', 'countries', 'roles',
+                'members', 'users', 'teams')))
+            ->editUrl(route('admin.projects.edit', $project->id))
+            ->deleteUrl(route('admin.projects.delete', $project->id))
+            ->indexUrl(route('admin.projects.index'))
+            ->build();
     }
 
     /**
@@ -148,8 +204,12 @@ class ProjectController extends Controller
             'label' => $team->name
         ])->toArray();
 
-        return view('hito-admin::projects.edit', compact('project', 'clients', 'countries', 'roles',
-            'members', 'users', 'teams'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.projects.update', compact('project')))
+            ->view(view('hito-admin::projects._form', compact('project', 'clients', 'countries', 'roles',
+                'members', 'users', 'teams')))
+            ->build();
     }
 
     /**
@@ -174,7 +234,9 @@ class ProjectController extends Controller
 
         $this->projectService->update($project->id, $data);
 
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Project']));
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -186,11 +248,12 @@ class ProjectController extends Controller
     {
         $this->authorize('delete', $project);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.projects.destroy', $project->id),
-            'noAction' => route('admin.projects.show', $project->id),
-            'entity' => 'project'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.projects.destroy', compact('project')))
+            ->cancelUrl(route('admin.projects.show', $project->id))
+            ->build();
     }
 
     /**
@@ -201,7 +264,9 @@ class ProjectController extends Controller
     {
         $project->delete();
 
-        return redirect()->route('admin.projects.index')->with('sucess', 'Project deleted successfully.');
+        return AdminResourceFactory::destroy('admin.projects.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**

@@ -11,10 +11,11 @@ use Hito\Admin\Builders\AdminShowResourceBuilder;
 use Hito\Admin\Builders\AdminStoreResourceBuilder;
 use Hito\Admin\Builders\AdminUpdateResourceBuilder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class AdminResourceFactory
 {
-    public static function index(LengthAwarePaginator $items, callable $itemCallback): AdminIndexResourceBuilder
+    public static function index(LengthAwarePaginator|Collection $items, callable $itemCallback): AdminIndexResourceBuilder
     {
         return new AdminIndexResourceBuilder($items, $itemCallback);
     }

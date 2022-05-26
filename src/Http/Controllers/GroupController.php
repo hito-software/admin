@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreGroupRequest;
 use Hito\Admin\Http\Requests\UpdateGroupRequest;
 use Hito\Platform\Models\Group;
@@ -12,16 +12,14 @@ use Hito\Platform\Services\UserService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
-use function back;
-use function redirect;
 use function request;
 use function view;
 
 class GroupController extends Controller
 {
+    private string $entitySingular = 'Group';
+    private string $entityPlural = 'Groups';
+
     public function __construct(
         private readonly GroupService      $groupService,
         private readonly UserService       $userService,
@@ -35,9 +33,35 @@ class GroupController extends Controller
      */
     public function index(): View
     {
-        $groups = $this->groupService->getAll();
+        $groups = $this->groupService->getAll(); // TODO Replace with paginator
 
-        return view('hito-admin::groups.index', compact('groups'));
+        return AdminResourceFactory::index($groups, function (Group $group) {
+            return view('hito-admin::groups._index-item', compact('group'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.groups.create'))
+            ->showUrl(function (Group $group) {
+                if (!auth()->user()->can('show', $group)) {
+                    return null;
+                }
+
+                return route('admin.groups.show', $group->id);
+            })
+            ->editUrl(function (Group $group) {
+                if (!auth()->user()->can('edit', $group)) {
+                    return null;
+                }
+
+                return route('admin.groups.edit', $group->id);
+            })
+            ->deleteUrl(function (Group $group) {
+                if (!auth()->user()->can('delete', $group)) {
+                    return null;
+                }
+
+                return route('admin.groups.delete', $group->id);
+            })
+            ->build();
     }
 
     /**
@@ -56,7 +80,11 @@ class GroupController extends Controller
             'label' => $permission->name
         ])->toArray();
 
-        return view('hito-admin::groups.create', compact('group', 'users', 'permissions'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.groups.store'))
+            ->view(view('hito-admin::groups._form', compact('group', 'users', 'permissions')))
+            ->build();
     }
 
     /**
@@ -72,8 +100,9 @@ class GroupController extends Controller
             request('permission', [])
         );
 
-        return redirect()->route('admin.groups.edit', $group->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Group']));
+        return AdminResourceFactory::store('admin.groups.edit', $group->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -82,10 +111,24 @@ class GroupController extends Controller
      */
     public function show(Group $group): View
     {
-        $users = $group->users;
-        $permissions = $group->permissions;
+        $users = $this->userService->getAll()->map(fn($user) => [
+            'value' => $user->id,
+            'label' => "{$user->name} {$user->surname}"
+        ])->toArray();
 
-        return view('hito-admin::groups.show', compact('group', 'users', 'permissions'));
+        $permissions = $this->permissionService->getAll()->map(fn($permission) => [
+            'value' => $permission->id,
+            'label' => $permission->name
+        ])->toArray();
+
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($group->name)
+            ->view(view('hito-admin::groups._show', compact('group', 'users', 'permissions')))
+            ->editUrl(route('admin.groups.edit', $group->id))
+            ->deleteUrl(route('admin.groups.delete', $group->id))
+            ->indexUrl(route('admin.groups.index'))
+            ->build();
     }
 
     /**
@@ -104,7 +147,11 @@ class GroupController extends Controller
             'label' => $permission->name
         ])->toArray();
 
-        return view('hito-admin::groups.edit', compact('group', 'users', 'permissions'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.groups.update', compact('group')))
+            ->view(view('hito-admin::groups._form', compact('group', 'users', 'permissions')))
+            ->build();
     }
 
     /**
@@ -115,7 +162,10 @@ class GroupController extends Controller
     public function update(UpdateGroupRequest $request, Group $group): RedirectResponse
     {
         $this->groupService->update($group->id, request(['name', 'description', 'users', 'permissions']));
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Group']));
+
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -127,11 +177,12 @@ class GroupController extends Controller
     {
         $this->authorize('delete', $group);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.groups.destroy', $group->id),
-            'noAction' => route('admin.groups.show', $group->id),
-            'entity' => 'group'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.groups.destroy', compact('group')))
+            ->cancelUrl(route('admin.groups.show', $group->id))
+            ->build();
     }
 
     /**
@@ -142,7 +193,8 @@ class GroupController extends Controller
     {
         $group->delete();
 
-        return redirect()->route('admin.groups.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Group']));
+        return AdminResourceFactory::destroy('admin.groups.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 }

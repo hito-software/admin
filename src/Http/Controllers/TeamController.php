@@ -2,7 +2,7 @@
 
 namespace Hito\Admin\Http\Controllers;
 
-use Hito\Admin\Http\Controllers\Controller;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreTeamRequest;
 use Hito\Admin\Http\Requests\UpdateTeamRequest;
 use Hito\Platform\Models\Team;
@@ -14,18 +14,20 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class TeamController extends Controller
 {
+    private string $entitySingular = 'Location';
+    private string $entityPlural = 'Locations';
+
     public function __construct(
-        private readonly TeamService $teamService,
-        private readonly UserService $userService,
-        private readonly RoleService $roleService,
+        private readonly TeamService    $teamService,
+        private readonly UserService    $userService,
+        private readonly RoleService    $roleService,
         private readonly ProjectService $projectService
-    ) {
+    )
+    {
         $this->authorizeResource(Team::class);
     }
 
@@ -36,7 +38,33 @@ class TeamController extends Controller
     {
         $teams = $this->teamService->getAllPaginated();
 
-        return view('hito-admin::teams.index', compact('teams'));
+        return AdminResourceFactory::index($teams, function (Team $team) {
+            return view('hito-admin::teams._index-item', compact('team'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.teams.create'))
+            ->showUrl(function (Team $team) {
+                if (!auth()->user()->can('show', $team)) {
+                    return null;
+                }
+
+                return route('admin.teams.show', $team->id);
+            })
+            ->editUrl(function (Team $team) {
+                if (!auth()->user()->can('edit', $team)) {
+                    return null;
+                }
+
+                return route('admin.teams.edit', $team->id);
+            })
+            ->deleteUrl(function (Team $team) {
+                if (!auth()->user()->can('delete', $team)) {
+                    return null;
+                }
+
+                return route('admin.teams.delete', $team->id);
+            })
+            ->build();
     }
 
     /**
@@ -45,17 +73,21 @@ class TeamController extends Controller
      */
     public function create(Team $team): View
     {
-        $users = $this->userService->getAll()->map(fn ($user) => [
+        $users = $this->userService->getAll()->map(fn($user) => [
             'value' => $user->id,
             'label' => "{$user->name} {$user->surname}"
         ])->toArray();
         $roles = $this->roleService->getAllByType('team');
-        $projects = $this->projectService->getAll()->map(fn ($project) => [
+        $projects = $this->projectService->getAll()->map(fn($project) => [
             'value' => $project->id,
             'label' => $project->name
         ])->toArray();
 
-        return view('hito-admin::teams.create', compact('team', 'projects', 'roles', 'users'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.teams.store'))
+            ->view(view('hito-admin::teams._form', compact('team', 'projects', 'roles', 'users')))
+            ->build();
     }
 
     /**
@@ -76,8 +108,9 @@ class TeamController extends Controller
 
         $this->teamService->syncProjects($team->id, request('projects', []));
 
-        return redirect()->route('admin.teams.edit', $team->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'Team']));
+        return AdminResourceFactory::store('admin.teams.edit', $team->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -86,11 +119,27 @@ class TeamController extends Controller
      */
     public function show(Team $team): View
     {
-        $roles = $this->roleService->getAllByType('team');
-        $members = $team->members;
-        $projects = $team->projects;
+        $users = $this->userService->getAll()->map(fn($user) => [
+            'value' => $user->id,
+            'label' => "{$user->name} {$user->surname}"
+        ])->toArray();
 
-        return view('hito-admin::teams.show', compact('team', 'roles', 'members', 'projects'));
+        $roles = $this->roleService->getAllByType('team');
+        $members = $this->teamService->getMembersByTeamId($team->id);
+
+        $projects = $this->projectService->getAll()->map(fn($project) => [
+            'value' => $project->id,
+            'label' => $project->name
+        ])->toArray();
+
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($team->name)
+            ->view(view('hito-admin::teams._show', compact('team', 'users', 'roles', 'members', 'projects')))
+            ->editUrl(route('admin.teams.edit', $team->id))
+            ->deleteUrl(route('admin.teams.delete', $team->id))
+            ->indexUrl(route('admin.teams.index'))
+            ->build();
     }
 
     /**
@@ -101,7 +150,7 @@ class TeamController extends Controller
      */
     public function edit(Team $team): View
     {
-        $users = $this->userService->getAll()->map(fn ($user) => [
+        $users = $this->userService->getAll()->map(fn($user) => [
             'value' => $user->id,
             'label' => "{$user->name} {$user->surname}"
         ])->toArray();
@@ -109,12 +158,16 @@ class TeamController extends Controller
         $roles = $this->roleService->getAllByType('team');
         $members = $this->teamService->getMembersByTeamId($team->id);
 
-        $projects = $this->projectService->getAll()->map(fn ($project) => [
+        $projects = $this->projectService->getAll()->map(fn($project) => [
             'value' => $project->id,
             'label' => $project->name
         ])->toArray();
 
-        return view('hito-admin::teams.edit', compact('team', 'users', 'roles', 'members', 'projects'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.teams.update', compact('team')))
+            ->view(view('hito-admin::teams._form', compact('team', 'users', 'roles', 'members', 'projects')))
+            ->build();
     }
 
     /**
@@ -136,7 +189,10 @@ class TeamController extends Controller
         $this->teamService->syncProjects($team->id, $projects);
 
         $this->teamService->update($team->id, $data);
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'Team']));
+
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -148,11 +204,12 @@ class TeamController extends Controller
     {
         $this->authorize('delete', $team);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.teams.destroy', $team->id),
-            'noAction' => route('admin.teams.show', $team->id),
-            'entity' => 'team'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.teams.destroy', compact('team')))
+            ->cancelUrl(route('admin.teams.show', $team->id))
+            ->build();
     }
 
     /**
@@ -163,8 +220,9 @@ class TeamController extends Controller
     {
         $team->delete();
 
-        return redirect()->route('admin.teams.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'Team']));
+        return AdminResourceFactory::destroy('admin.teams.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -197,7 +255,7 @@ class TeamController extends Controller
      */
     private function syncRoles(Request $request, Team $team): void
     {
-        $roles = array_filter($request->all(), fn ($key) => str_contains($key, 'roles_'), ARRAY_FILTER_USE_KEY);
+        $roles = array_filter($request->all(), fn($key) => str_contains($key, 'roles_'), ARRAY_FILTER_USE_KEY);
         $members = [];
 
         foreach ($roles as $key => $userUuids) {

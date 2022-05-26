@@ -3,26 +3,25 @@
 namespace Hito\Admin\Http\Controllers;
 
 use Carbon\Carbon;
-use Hito\Admin\Http\Controllers\Controller;
+use Exception;
+use Hito\Admin\Factories\AdminResourceFactory;
 use Hito\Admin\Http\Requests\StoreUserRequest;
 use Hito\Admin\Http\Requests\UpdateUserRequest;
-use Hito\Platform\Models\Group;
 use Hito\Platform\Models\User;
 use Hito\Platform\Services\GroupService;
 use Hito\Platform\Services\PermissionService;
 use Hito\Platform\Services\UserService;
-use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    private string $entitySingular = 'User';
+    private string $entityPlural = 'Users';
+
     public function __construct(
         private readonly UserService       $userService,
         private readonly GroupService      $groupService,
@@ -38,15 +37,46 @@ class UserController extends Controller
     {
         $users = $this->userService->getAllPaginated();
 
-        return view('hito-admin::users.index', compact('users'));
+        return AdminResourceFactory::index($users, function (User $user) {
+            return view('hito-admin::users._index-item', compact('user'));
+        })
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->createUrl(route('admin.users.create'))
+            ->showUrl(function (User $user) {
+                if (!auth()->user()->can('show', $user)) {
+                    return null;
+                }
+
+                return route('admin.users.show', $user->id);
+            })
+            ->editUrl(function (User $user) {
+                if (!auth()->user()->can('edit', $user)) {
+                    return null;
+                }
+
+                return route('admin.users.edit', $user->id);
+            })
+            ->deleteUrl(function (User $user) {
+                if (!auth()->user()->can('delete', $user)) {
+                    return null;
+                }
+
+                return route('admin.users.delete', $user->id);
+            })
+            ->build();
     }
 
     /**
+     * @param User $user
      * @return View
      */
     public function create(User $user): View
     {
-        return view('hito-admin::users.create', compact('user'));
+        return AdminResourceFactory::create()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->storeUrl(route('admin.users.store'))
+            ->view(view('hito-admin::users._form', compact('user')))
+            ->build();
     }
 
     /**
@@ -85,8 +115,9 @@ class UserController extends Controller
             $data['telegram'],
         );
 
-        return redirect()->route('admin.users.edit', $user->id)
-            ->with('success', \Lang::get('forms.created_successfully', ['entity' => 'User']));
+        return AdminResourceFactory::store('admin.users.edit', $user->id)
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -95,10 +126,24 @@ class UserController extends Controller
      */
     public function show(User $user): View
     {
-        $groups = $user->groups;
-        $permissions = $user->permissions;
+        $groups = $this->groupService->getAll()->map(fn($group) => [
+            'value' => $group->id,
+            'label' => $group->name
+        ])->toArray();
 
-        return view('hito-admin::users.show', compact('user', 'groups', 'permissions'));
+        $permissions = $this->permissionService->getAll()->map(fn($permission) => [
+            'value' => $permission->id,
+            'label' => $permission->name
+        ])->toArray();
+
+        return AdminResourceFactory::show()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->title($user->name)
+            ->view(view('hito-admin::users._show', compact('user', 'groups', 'permissions')))
+            ->editUrl(route('admin.users.edit', $user->id))
+            ->deleteUrl(route('admin.users.delete', $user->id))
+            ->indexUrl(route('admin.users.index'))
+            ->build();
     }
 
     /**
@@ -117,7 +162,11 @@ class UserController extends Controller
             'label' => $permission->name
         ])->toArray();
 
-        return view('hito-admin::users.edit', compact('user', 'groups', 'permissions'));
+        return AdminResourceFactory::edit()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->updateUrl(route('admin.users.update', compact('user')))
+            ->view(view('hito-admin::users._form', compact('user', 'groups', 'permissions')))
+            ->build();
     }
 
     /**
@@ -134,7 +183,10 @@ class UserController extends Controller
         $data['timezone_id'] = request('timezone');
 
         $this->userService->update($user->id, $data);
-        return back()->with('success', \Lang::get('forms.updated_successfully', ['entity' => 'User']));
+
+        return AdminResourceFactory::update()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**
@@ -146,11 +198,12 @@ class UserController extends Controller
     {
         $this->authorize('delete', $user);
 
-        return view('shared.delete-entity', [
-            'action' => route('admin.users.destroy', $user->id),
-            'noAction' => route('admin.users.show', $user->id),
-            'entity' => 'user'
-        ]);
+        return AdminResourceFactory::delete()
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->isUsed(false)
+            ->destroyUrl(route('admin.users.destroy', compact('user')))
+            ->cancelUrl(route('admin.users.show', $user->id))
+            ->build();
     }
 
     /**
@@ -161,8 +214,10 @@ class UserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         $user->delete();
-        return redirect()->route('admin.users.index')
-            ->with('success', \Lang::get('forms.deleted_successfully', ['entity' => 'User']));
+
+        return AdminResourceFactory::destroy('admin.users.index')
+            ->entity($this->entitySingular, $this->entityPlural)
+            ->build();
     }
 
     /**

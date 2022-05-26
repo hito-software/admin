@@ -10,7 +10,7 @@ class AdminIndexResourceBuilder extends AbstractAdminResourceBuilder
     private ?string $createUrl = null;
     private array $callbacks = [];
 
-    public function __construct(private LengthAwarePaginator $items, callable $itemCallback)
+    public function __construct(private LengthAwarePaginator|Collection $items, callable $itemCallback)
     {
         $this->callbacks['item'] = $itemCallback;
     }
@@ -23,13 +23,14 @@ class AdminIndexResourceBuilder extends AbstractAdminResourceBuilder
     protected function getData(): array
     {
         return [
+            'hasPagination' => $this->items instanceof LengthAwarePaginator,
             'items' => $this->items,
             'processedItems' => $this->processItems($this->items, $this->callbacks['item']),
             'createUrl' => $this->createUrl
         ];
     }
 
-    protected function processItems(LengthAwarePaginator $items, callable $itemCallback): Collection
+    protected function processItems(LengthAwarePaginator|Collection $items, callable $itemCallback): Collection
     {
         $processedItems = collect(); // @phpstan-ignore-line
 
