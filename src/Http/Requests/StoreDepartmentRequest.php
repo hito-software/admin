@@ -20,7 +20,7 @@ class StoreDepartmentRequest extends FormRequest
                 'max:255',
                 Rule::unique('departments')->withoutTrashed()
             ],
-            'description' => 'required|max:255',
+            'description' => 'max:255',
             'members' => 'nullable|array',
             'members.*' => 'uuid'
         ];
