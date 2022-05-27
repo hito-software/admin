@@ -14,22 +14,11 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->configureRateLimiting();
-
         $this->routes(function () {
             Route::middleware(['web', 'auth'])
                 ->name('admin.')
                 ->prefix('admin')
                 ->group(__DIR__ . '/../../routes/web.php');
         });
-    }
-
-    /**
-     * Configure the rate limiters for the application.
-     *
-     * @return void
-     */
-    protected function configureRateLimiting()
-    {
     }
 }
