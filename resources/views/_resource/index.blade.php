@@ -19,7 +19,7 @@
             @if ($hasPagination && $items->hasPages())
                 <x-slot name="footerSlot">
                     <div class="w-full">
-                        {{ $items->onEachSide(1)->links() }}
+                        {{ $items->withQueryString()->onEachSide(1)->links() }}
                     </div>
                 </x-slot>
             @endif
