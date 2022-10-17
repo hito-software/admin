@@ -89,11 +89,15 @@
 
                                                 @if(!$module['installed'] && auth()->user()->can('create', \App\Models\User::class))
                                                     <div>
+                                                        @if ($module['is_local_package'])
+                                                            <input name="module_version" hidden value="*">
+                                                        @else
                                                         <select name="module_version" class="rounded py-1 px-2 bg-gray-100 border">
                                                             @foreach($module['string_versions'] as $version)
                                                                 <option value="{{ $version }}">{{ $version }}</option>
                                                             @endforeach
                                                         </select>
+                                                        @endif
                                                     </div>
 
                                                     <div>
